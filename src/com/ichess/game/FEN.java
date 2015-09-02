@@ -362,6 +362,10 @@ public class FEN {
             return null;
         }
 
+        // reload gkind, grules (maybe deducted from position)
+        gkind = game.getGameKind();
+        grules = game.getGameRules();
+
         List<Piece> whiteKings = game.findPieces(Common.PIECE_TYPE_KING, Common.COLOR_WHITE);
         List<Piece> blackKings = game.findPieces(Common.PIECE_TYPE_KING, Common.COLOR_BLACK);
         // now try to guess game kind and rules if needed

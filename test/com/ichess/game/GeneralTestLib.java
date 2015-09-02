@@ -9,23 +9,20 @@
 
 package com.ichess.game;
 
-import com.ichess.game.*;
-import com.ichess.game.TimeUtils;
-import com.ichess.game.Utils;
 import com.ichess.jvoodoo.Invocation;
 import com.ichess.jvoodoo.ReturnPredicat;
 import com.ichess.jvoodoo.Scenarios;
 import com.ichess.jvoodoo.Voodoo;
-import junit.framework.TestCase;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
 import java.io.FileInputStream;
 import java.util.*;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static org.junit.Assert.*;
 
 public class GeneralTestLib {
 
@@ -1137,4 +1134,107 @@ public class GeneralTestLib {
         assertFalse(game.isEnded());
     }
 
+    @Test
+    public void test_canCastleEvenIfPawnThreadOnKingWayBug()
+    {
+        String fen = "r1b1k2r/ppp1Pppp/8/3q4/2pP4/2Qn1N2/PP2pPPP/R5KR b kq - 0 1";
+        Game game = FEN.loadGame(fen, true);
+        assertNotNull(game);
+        assertEquals(game.getCurrentColor(), Common.COLOR_BLACK);
+        assertFalse(game.playMove("0-0"));
+        assertEquals(game.getCurrentColor(), Common.COLOR_BLACK);
+    }
+
+    @Test
+    public void testStrangeCheckNotationInViewboard()
+    {
+        Game game = FEN.loadGame("1R1K4/k1n5/1p6/1P6/8/8/8/8 w - - 0 1");
+        game.playMoveList("1. Ra8+ Nxa8 2. Kc8 Nc7 3. Kxc7 Ka8 4. Kxb6 Kb8 5. Ka6 Ka8 6. b6 Kb8");
+        assertEquals(game.getMoveListAlg(), "Ra8+ Nxa8 Kc8 Nc7 Kxc7 Ka8 Kxb6 Kb8 Ka6 Ka8 b6 Kb8");
+    }
+
+    @Test
+    public void testCrazyHouseBug_canMoveIntoCheck()
+    {
+        Game game = new Game(Common.GAME_KIND_CRAZY_HOUSE);
+        game.playMoveList("e2e4  b8c6  d2d4  d7d5  e4e5  c8f5  f1b5  e7e6  b5c6  b7c6  b1c3  b4b4b c1d2  b4c3  d2c3  f5c2  d1c2  b4b4n c3b4  f8b4  c3c3b e4e4b d3d3b e4d3  c2d3  e4e4b d3g3  b4c3  b2c3  b2b2p a1d1  d2d2b e1d2  b2b1q d1b1  e4b1  g3g7  c2c2r d2d1  d8e7  c5c5b e7c5  d4c5  h5h5b f3f3p h5f3  g2f3  c2c1  d1c1  d2d2p c1d2  g8f6  g7h8  e8e7  h8f6  e7d7  e7e7q d7c8  a6a6b");
+        List<Move> nextMoves = game.getValidNextMoves();
+        assertEquals(nextMoves.size(), 1);
+        assertEquals(nextMoves.get(0).getNameAlg(), "Kb8");
+    }
+
+    @Test
+    public void testCrazyHouseFEN_EditboardBug()
+    {
+        String fen = "rk1B4/pbp3pp/2p1R3/2Bp4/3P4/2PB1N2/P1PK1PPP/q4R2[NPNPQRNq] w";
+        Game game = FEN.loadGame(fen, true, 0);
+        assertNotNull(game);
+        String fromGame = FEN.getFENString(game);
+        assertEquals(fromGame, "rk1B4/pbp3pp/2p1R3/2Bp4/3P4/2PB1N2/P1PK1PPP/q4R2[NPNPQRNq] w - - 0 1");
+    }
+
+    @Test
+    public void testCrayHouseFEN_EditboardBug2()
+    {
+        String fen = "rk1B4/pbp3pp/2p1R3/2Bp4/3P4/2PB1N2/P1PK1PPP/q4R2/Qnpnpqrn w";
+        Game game = FEN.loadGame(fen, true, 0);
+        assertNotNull(game);
+        String fromGame = FEN.getFENString(game);
+        assertEquals(fromGame, "rk1B4/pbp3pp/2p1R3/2Bp4/3P4/2PB1N2/P1PK1PPP/q4R2[NPNPQRNq] w - - 0 1");
+    }
+
+    @Test
+    public void test_CrazyHouse_PGN_Bug()
+    {
+        String pgn = "[Site \"אתר השחמט הישראלי ichess\"]\n" +
+                "[Date \"2014.09.27\"]\n" +
+                "[Result \"*\"]\n" +
+                "[Variant \"Crazyhouse\"]\n" +
+                "[SetUp \"1\"]\n" +
+                "[FEN \"rnbq~kbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQ~KBNR w KQkq - 0 1\"]\n" +
+                "\n" +
+                "*";
+        Game game = PGN.loadGame(pgn);
+        assertNotNull(game);
+        assertTrue(game.isCrazyHouse());
+        Piece queen = game.findPiece(Common.PIECE_TYPE_QUEEN, Common.COLOR_WHITE);
+        assertTrue(queen.isPromoted());
+    }
+
+    @Test
+    public void test_CrazyHouse_CustomFEN_PGN()
+    {
+        String pgn = "[Date \"2014.09.26\"]\n" +
+                "[Result \"*\"]\n" +
+                "[Variant \"CrazyHouse\"]\n" +
+                "[SetUp \"1\"]\n" +
+                "[FEN \"rn1q3r/ppp1kPpp/3bP3/3n4/8/8/PPPP1PPP/RNB1KB1R[PNBRQpnbrq] b - - 0 11\"]\n" +
+                "\n" +
+                "1... Nc6 Q@g8 Rxg8 4. fxg8=Q Qxg8 5. Nc3 5. P@e4 N@g4 6. Q@f3 *";
+        Game game = PGN.loadGame(pgn);
+        assertNotNull(game);
+    }
+
+    @Test
+    public void test_CrazyHouse_CheckMate_CantDropPawnOnFirstLevel()
+    {
+        Game game = new Game(Common.GAME_KIND_CRAZY_HOUSE);
+        String movelist = "1. e4 b6 2. Nf3 Bb7 3. Nc3 e6 4. Bc4 Bb4 5. O-O Bxc3 6. bxc3 Bxe4 7. Ba3 Bxf3 8. Qxf3 d5 9. Bxd5 exd5 10. Rfe1+ P@e7 11. B@b7 B@e4 12. Rxe4 dxe4 13. Qxe4 R@e6 14. Qxe6 fxe6 15. R@c8 Qxc8 16. Bxc8 Nd7 17. Bxd7+ Kf8 18. Q@f3+ Nf6 19. Qxa8+ R@e8 20. Bxe8 N@e2+ 21. Kh1 Nxe8 22. Qf3+ N@f4 23. N@d7+ Kf7 24. Ne5+ Kg8 25. P@f7+ Kf8 26. fxe8=Q+ Kxe8 27. R@a8+ Q@b8 28. Rxb8+ B@c8";
+        assertTrue(game.playMoveList(movelist));
+        assertTrue(game.playMoveList("29. Rxc8+"));
+        assertTrue(game.isCheck());
+        assertTrue(game.isCheckMate());
+        assertTrue(game.isEnded());
+    }
+
+    @Test
+    public void test_CrazyHouse_BugWithDroppingPromotedPawn()
+    {
+        String fen = "rn1q3r/ppp1kPpp/3bP3/3n4/8/8/PPPP1PPP/RNB1KB1R[PNBRQQpnbrqq] w - - 0 11";
+        Game game = FEN.loadGame(fen, 0);
+        assertNotNull(game);
+        assertTrue(game.isCrazyHouse());
+        game.playMoveList("g8g8q h8g8  f7g8q d8g8  b1c3  e4e4p g4g4n f3f3p");
+        assertEquals(game.getMoveListAlg(), "Q@g8 Rxg8 fxg8=Q Qxg8 Nc3 P@e4 N@g4 P@f3");
+    }
 }

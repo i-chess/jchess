@@ -716,8 +716,20 @@ public class Game {
                         boolean addDropAnyMove = true;
                         if (isCrazyHouse())
                         {
+                            // in crazyhouse need to check that a droppable piece can be dropped
+                            // in the target square (can be a pawn in row1/8)
+                            addDropAnyMove = false;
                             List<Piece> droppable = getDroppablePieces(_currentColor);
-                            addDropAnyMove = ! droppable.isEmpty();
+                            for (Piece piece : droppable)
+                            {
+                                Piece actuallyDroppedPiece = Piece.create( piece.getTypeWhenDropping(),
+                                        piece.getColor());
+                                if (actuallyDroppedPiece.canBeDroppedAt(x,y))
+                                {
+                                    addDropAnyMove = true;
+                                    break;
+                                }
+                            }
                         }
                         if (addDropAnyMove)
                         {
@@ -1496,6 +1508,20 @@ public class Game {
             }
         }
         return _moveInfos.get(_moveInfos.size() - 1);
+    }
+
+    /**
+     * Returns the information about the last move
+     * @return The current move info (information about the game after the last
+     * move).
+     */
+    public MoveInfo getLastMoveInfo() {
+        // maybe game was not started
+        analyse();
+        if (_moveInfos.size() < 2 ) {
+            return null;
+        }
+        return _moveInfos.get(_moveInfos.size() - 2);
     }
 
     public String getEndString() {

@@ -96,6 +96,7 @@ public class MoveInfo {
             Move move = new Move(_game, toX, toY, toX, toY, piece.getTypeWhenDropping());
             move.setMovedPiece(piece);
             validNextMoves.add(move);
+            move.setMoveNumber(_game.getCurrentMove() + 1);
             LOGGER.fine("adding move " + _game.getCurrentMove() + " valid drop to " + toX + "," + toY + " piece " + Notation.getPieceCharacter(piece.getTypeWhenDropping()));
             return;
         }
@@ -114,6 +115,7 @@ public class MoveInfo {
                 }
             }
         }
+        move.setMoveNumber(_game.getCurrentMove() + 1);
         move.setCapturedPiece(captured);
 
         LOGGER.fine("adding valid move " + _game.getCurrentMove() + " from " + piece.getX() + "," + piece.getY() + " to " + toX + "," + toY +

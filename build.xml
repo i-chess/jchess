@@ -77,5 +77,10 @@
             <formatter type="brief" usefile="false"/>
         </junit>
     </target>
-    <target name="all" depends="clean, compile, test, jar" />
+
+    <target name="javadoc">
+        <javadoc sourcepath="${src.dir}" destdir="javadoc" charset="UTF-8"  encoding="UTF-8" packagenames="com.ichess.game.*">
+        </javadoc>
+    </target>
+    <target name="all" depends="clean, compile, test, javadoc, jar" />
 </project>
