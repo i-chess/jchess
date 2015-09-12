@@ -28,8 +28,15 @@ public class GeneralTestLib {
 
     private final static Logger LOGGER = Logger.getLogger(FEN.class.getName());
 
-    private long fakeNowInMilliseconds;
-    
+    private static final ThreadLocal<Long> fakeNowInMilliseconds = new ThreadLocal<Long>(){
+        @Override
+        protected Long initialValue()
+        {
+            return new Long(0);
+        }
+    };
+
+
     @Before
     public void setUp() throws java.lang.Exception {
         Voodoo.castVoodooOn("com.ichess.game.TimeUtils");
@@ -37,19 +44,19 @@ public class GeneralTestLib {
             @Override
             public Object returnValue(Object... parameters) {
                 LOGGER.fine("return time " + fakeNowInMilliseconds);
-                return new Date(fakeNowInMilliseconds);
+                return new Date(fakeNowInMilliseconds.get());
             }
         };
         Scenarios.always(new Invocation("com.ichess.game.TimeUtils", "now", new ReturnPredicat(predicat)));
         predicat = new ReturnPredicat.Predicat() {
             @Override
             public Object returnValue(Object... parameters) {
-                LOGGER.fine("return time " + fakeNowInMilliseconds);
-                return fakeNowInMilliseconds;
+                LOGGER.fine("return time " + fakeNowInMilliseconds.get());
+                return fakeNowInMilliseconds.get();
             }
         };
         Scenarios.always(new Invocation("com.ichess.game.TimeUtils", "nowInMs", new ReturnPredicat(predicat)));
-        fakeNowInMilliseconds = 1;
+        fakeNowInMilliseconds.set((long)(1));
     }
 
     @Test
@@ -149,7 +156,7 @@ public class GeneralTestLib {
         game.setTimeLimitForGame(5);
         assertFalse(game.isOutOfTime(Common.COLOR_WHITE));
         assertFalse(game.isOutOfTime(Common.COLOR_BLACK));
-        fakeNowInMilliseconds += (10 * TimeUtils.MS_IN_MINUTE);
+        fakeNowInMilliseconds.set(fakeNowInMilliseconds.get() + (10 * TimeUtils.MS_IN_MINUTE));
         // no timeout - no moves played
         assertFalse(game.isOutOfTime(Common.COLOR_WHITE));
         assertFalse(game.isOutOfTime(Common.COLOR_BLACK));
@@ -157,7 +164,7 @@ public class GeneralTestLib {
         assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), 5 * TimeUtils.MS_IN_MINUTE);
 
         game.playMove("e4");
-        fakeNowInMilliseconds += TimeUtils.MS_IN_MINUTE;
+        fakeNowInMilliseconds.set(fakeNowInMilliseconds.get() + TimeUtils.MS_IN_MINUTE);
         // no timeout after 1 minute
         assertFalse(game.isOutOfTime(Common.COLOR_WHITE));
         assertFalse(game.isOutOfTime(Common.COLOR_BLACK));
@@ -165,14 +172,14 @@ public class GeneralTestLib {
         assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), 4 * TimeUtils.MS_IN_MINUTE);
 
         // no timeout after 4 minutes - 1 second
-        fakeNowInMilliseconds += ((4 * TimeUtils.MS_IN_MINUTE) - TimeUtils.MS_IN_SECOND);
+        fakeNowInMilliseconds.set(fakeNowInMilliseconds.get() + ((4 * TimeUtils.MS_IN_MINUTE) - TimeUtils.MS_IN_SECOND));
         assertFalse(game.isOutOfTime(Common.COLOR_WHITE));
         assertFalse(game.isOutOfTime(Common.COLOR_BLACK));
         assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), 5 * TimeUtils.MS_IN_MINUTE);
-        assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), 1 * TimeUtils.MS_IN_SECOND);
+        assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), TimeUtils.MS_IN_SECOND);
 
         // timeout after 2 more seconds
-        fakeNowInMilliseconds += (2 * TimeUtils.MS_IN_SECOND);
+        fakeNowInMilliseconds.set(fakeNowInMilliseconds.get() + (2 * TimeUtils.MS_IN_SECOND));
         assertFalse(game.isOutOfTime(Common.COLOR_WHITE));
         assertTrue(game.isOutOfTime(Common.COLOR_BLACK));
     }
@@ -195,19 +202,19 @@ public class GeneralTestLib {
         assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), 3 * TimeUtils.MS_IN_MINUTE + 9 * TimeUtils.MS_IN_SECOND);
 
 
-        fakeNowInMilliseconds += (3 * TimeUtils.MS_IN_MINUTE);
+        fakeNowInMilliseconds.set(fakeNowInMilliseconds.get() + (3 * TimeUtils.MS_IN_MINUTE));
         assertFalse(game.isOutOfTime(Common.COLOR_WHITE));
         assertFalse(game.isOutOfTime(Common.COLOR_BLACK));
         assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), 9 * TimeUtils.MS_IN_SECOND);
         assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), 3 * TimeUtils.MS_IN_MINUTE + 9 * TimeUtils.MS_IN_SECOND);
 
-        fakeNowInMilliseconds += (8 * TimeUtils.MS_IN_SECOND);
+        fakeNowInMilliseconds.set(fakeNowInMilliseconds.get() + (8 * TimeUtils.MS_IN_SECOND));
         assertFalse(game.isOutOfTime(Common.COLOR_WHITE));
         assertFalse(game.isOutOfTime(Common.COLOR_BLACK));
-        assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), 1 * TimeUtils.MS_IN_SECOND);
+        assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), TimeUtils.MS_IN_SECOND);
         assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), 3 * TimeUtils.MS_IN_MINUTE + 9 * TimeUtils.MS_IN_SECOND);
 
-        fakeNowInMilliseconds += (2 * TimeUtils.MS_IN_SECOND);
+        fakeNowInMilliseconds.set(fakeNowInMilliseconds.get() + (2 * TimeUtils.MS_IN_SECOND));
         assertTrue(game.isOutOfTime(Common.COLOR_WHITE));
         assertFalse(game.isOutOfTime(Common.COLOR_BLACK));
     }
@@ -223,16 +230,16 @@ public class GeneralTestLib {
         game.playMoveList("e4 e5");
         assertFalse(game.isOutOfTime(Common.COLOR_WHITE));
         assertFalse(game.isOutOfTime(Common.COLOR_BLACK));
-        assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), (1 * TimeUtils.MS_IN_MINUTE) + (2 * TimeUtils.MS_IN_SECOND));
+        assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), (TimeUtils.MS_IN_MINUTE) + (2 * TimeUtils.MS_IN_SECOND));
         assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), (3 * TimeUtils.MS_IN_MINUTE) + (4 * TimeUtils.MS_IN_SECOND));
 
         game.playMoveList("d4 d5");
         assertFalse(game.isOutOfTime(Common.COLOR_WHITE));
         assertFalse(game.isOutOfTime(Common.COLOR_BLACK));
-        assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), (1 * TimeUtils.MS_IN_MINUTE) + (4 * TimeUtils.MS_IN_SECOND));
+        assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), (TimeUtils.MS_IN_MINUTE) + (4 * TimeUtils.MS_IN_SECOND));
         assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), (3 * TimeUtils.MS_IN_MINUTE) + (8 * TimeUtils.MS_IN_SECOND));
 
-        fakeNowInMilliseconds += (2 * TimeUtils.MS_IN_MINUTE);
+        fakeNowInMilliseconds.set(fakeNowInMilliseconds.get() + (2 * TimeUtils.MS_IN_MINUTE));
         assertTrue(game.isOutOfTime(Common.COLOR_WHITE));
         assertFalse(game.isOutOfTime(Common.COLOR_BLACK));
     }
@@ -252,47 +259,47 @@ public class GeneralTestLib {
         assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), (2 * TimeUtils.MS_IN_MINUTE) + (4 * TimeUtils.MS_IN_SECOND));
         assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), (2 * TimeUtils.MS_IN_MINUTE));
 
-        fakeNowInMilliseconds += TimeUtils.MS_IN_MINUTE;
+        fakeNowInMilliseconds.set(fakeNowInMilliseconds.get() + TimeUtils.MS_IN_MINUTE);
 
         assertFalse(game.isOutOfTime(Common.COLOR_WHITE));
         assertFalse(game.isOutOfTime(Common.COLOR_BLACK));
         assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), (2 * TimeUtils.MS_IN_MINUTE) + (4 * TimeUtils.MS_IN_SECOND));
-        assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), (1 * TimeUtils.MS_IN_MINUTE));
+        assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), (TimeUtils.MS_IN_MINUTE));
 
         game.playMoveList("e5");
 
         assertFalse(game.isOutOfTime(Common.COLOR_WHITE));
         assertFalse(game.isOutOfTime(Common.COLOR_BLACK));
         assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), (2 * TimeUtils.MS_IN_MINUTE) + (4 * TimeUtils.MS_IN_SECOND));
-        assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), (1 * TimeUtils.MS_IN_MINUTE) + (4 * TimeUtils.MS_IN_SECOND));
+        assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), (TimeUtils.MS_IN_MINUTE) + (4 * TimeUtils.MS_IN_SECOND));
 
-        fakeNowInMilliseconds += TimeUtils.MS_IN_MINUTE;
+        fakeNowInMilliseconds.set(fakeNowInMilliseconds.get() + TimeUtils.MS_IN_MINUTE);
 
         assertFalse(game.isOutOfTime(Common.COLOR_WHITE));
         assertFalse(game.isOutOfTime(Common.COLOR_BLACK));
-        assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), (1 * TimeUtils.MS_IN_MINUTE) + (4 * TimeUtils.MS_IN_SECOND));
-        assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), (1 * TimeUtils.MS_IN_MINUTE) + (4 * TimeUtils.MS_IN_SECOND));
+        assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), (TimeUtils.MS_IN_MINUTE) + (4 * TimeUtils.MS_IN_SECOND));
+        assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), (TimeUtils.MS_IN_MINUTE) + (4 * TimeUtils.MS_IN_SECOND));
 
         // after takeback the time gets back to when the clock started, and the clock holds
         game.takeback();
         assertFalse(game.isOutOfTime(Common.COLOR_WHITE));
         assertFalse(game.isOutOfTime(Common.COLOR_BLACK));
         assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), (2 * TimeUtils.MS_IN_MINUTE) + (4 * TimeUtils.MS_IN_SECOND));
-        assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), (1 * TimeUtils.MS_IN_MINUTE) + (4 * TimeUtils.MS_IN_SECOND));
+        assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), (TimeUtils.MS_IN_MINUTE) + (4 * TimeUtils.MS_IN_SECOND));
 
         // another takeback does not change the time
         game.takeback();
         assertFalse(game.isOutOfTime(Common.COLOR_WHITE));
         assertFalse(game.isOutOfTime(Common.COLOR_BLACK));
         assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), (2 * TimeUtils.MS_IN_MINUTE) + (4 * TimeUtils.MS_IN_SECOND));
-        assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), (1 * TimeUtils.MS_IN_MINUTE) + (4 * TimeUtils.MS_IN_SECOND));
+        assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), (TimeUtils.MS_IN_MINUTE) + (4 * TimeUtils.MS_IN_SECOND));
 
         // and the clock now runs again as white
-        fakeNowInMilliseconds += TimeUtils.MS_IN_MINUTE;
+        fakeNowInMilliseconds.set(fakeNowInMilliseconds.get() + TimeUtils.MS_IN_MINUTE);
         assertFalse(game.isOutOfTime(Common.COLOR_WHITE));
         assertFalse(game.isOutOfTime(Common.COLOR_BLACK));
-        assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), (1 * TimeUtils.MS_IN_MINUTE) + (4 * TimeUtils.MS_IN_SECOND));
-        assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), (1 * TimeUtils.MS_IN_MINUTE) + (4 * TimeUtils.MS_IN_SECOND));
+        assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), (TimeUtils.MS_IN_MINUTE) + (4 * TimeUtils.MS_IN_SECOND));
+        assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), (TimeUtils.MS_IN_MINUTE) + (4 * TimeUtils.MS_IN_SECOND));
     }
 
     @Test
@@ -305,12 +312,12 @@ public class GeneralTestLib {
         assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), 5 * TimeUtils.MS_IN_MINUTE);
 
         assertTrue(game.resumeClock());
-        fakeNowInMilliseconds += (1 * TimeUtils.MS_IN_MINUTE);
+        fakeNowInMilliseconds.set(fakeNowInMilliseconds.get() + (TimeUtils.MS_IN_MINUTE));
 
         assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), 4 * TimeUtils.MS_IN_MINUTE);
         assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), 5 * TimeUtils.MS_IN_MINUTE);
 
-        fakeNowInMilliseconds += (1 * TimeUtils.MS_IN_MINUTE);
+        fakeNowInMilliseconds.set(fakeNowInMilliseconds.get() + (TimeUtils.MS_IN_MINUTE));
         assertTrue(game.playMove("e4"));
         assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), 3 * TimeUtils.MS_IN_MINUTE);
         assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), 5 * TimeUtils.MS_IN_MINUTE);
@@ -333,41 +340,41 @@ public class GeneralTestLib {
         assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), 4 * TimeUtils.MS_IN_MINUTE + 2 * TimeUtils.MS_IN_SECOND);
         assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), 4 * TimeUtils.MS_IN_MINUTE + 2 * TimeUtils.MS_IN_SECOND);
 
-        fakeNowInMilliseconds += (1 * TimeUtils.MS_IN_MINUTE);
+        fakeNowInMilliseconds.set(fakeNowInMilliseconds.get() + (TimeUtils.MS_IN_MINUTE));
         assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), 3 * TimeUtils.MS_IN_MINUTE + 2 * TimeUtils.MS_IN_SECOND);
         assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), 4 * TimeUtils.MS_IN_MINUTE + 2 * TimeUtils.MS_IN_SECOND);
 
         game.pauseClock();
-        fakeNowInMilliseconds += (1 * TimeUtils.MS_IN_MINUTE);
+        fakeNowInMilliseconds.set(fakeNowInMilliseconds.get() + (TimeUtils.MS_IN_MINUTE));
         assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), 3 * TimeUtils.MS_IN_MINUTE + 2 * TimeUtils.MS_IN_SECOND);
         assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), 4 * TimeUtils.MS_IN_MINUTE + 2 * TimeUtils.MS_IN_SECOND);
 
         game.resumeClock();
-        fakeNowInMilliseconds += (1 * TimeUtils.MS_IN_MINUTE);
+        fakeNowInMilliseconds.set(fakeNowInMilliseconds.get() + (TimeUtils.MS_IN_MINUTE));
         assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), 2 * TimeUtils.MS_IN_MINUTE + 2 * TimeUtils.MS_IN_SECOND);
         assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), 4 * TimeUtils.MS_IN_MINUTE + 2 * TimeUtils.MS_IN_SECOND);
 
         game.playMove("Nf3");
-        fakeNowInMilliseconds += (3 * TimeUtils.MS_IN_MINUTE);
+        fakeNowInMilliseconds.set(fakeNowInMilliseconds.get() + (3 * TimeUtils.MS_IN_MINUTE));
         assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), 2 * TimeUtils.MS_IN_MINUTE + 4 * TimeUtils.MS_IN_SECOND);
-        assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), 1 * TimeUtils.MS_IN_MINUTE + 2 * TimeUtils.MS_IN_SECOND);
+        assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), TimeUtils.MS_IN_MINUTE + 2 * TimeUtils.MS_IN_SECOND);
 
         game.pauseClock();
-        fakeNowInMilliseconds += (3 * TimeUtils.MS_IN_MINUTE);
+        fakeNowInMilliseconds.set(fakeNowInMilliseconds.get() + (3 * TimeUtils.MS_IN_MINUTE));
         assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), 2 * TimeUtils.MS_IN_MINUTE + 4 * TimeUtils.MS_IN_SECOND);
-        assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), 1 * TimeUtils.MS_IN_MINUTE + 2 * TimeUtils.MS_IN_SECOND);
+        assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), TimeUtils.MS_IN_MINUTE + 2 * TimeUtils.MS_IN_SECOND);
 
         game.resumeClock();
         assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), 2 * TimeUtils.MS_IN_MINUTE + 4 * TimeUtils.MS_IN_SECOND);
-        assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), 1 * TimeUtils.MS_IN_MINUTE + 2 * TimeUtils.MS_IN_SECOND);
+        assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), TimeUtils.MS_IN_MINUTE + 2 * TimeUtils.MS_IN_SECOND);
 
-        fakeNowInMilliseconds += (1 * TimeUtils.MS_IN_MINUTE);
+        fakeNowInMilliseconds.set(fakeNowInMilliseconds.get() + (TimeUtils.MS_IN_MINUTE));
         assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), 2 * TimeUtils.MS_IN_MINUTE + 4 * TimeUtils.MS_IN_SECOND);
         assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), 2 * TimeUtils.MS_IN_SECOND);
         assertFalse(game.isOutOfTime(Common.COLOR_WHITE));
         assertFalse(game.isOutOfTime(Common.COLOR_BLACK));
 
-        fakeNowInMilliseconds += (3 * TimeUtils.MS_IN_SECOND);
+        fakeNowInMilliseconds.set(fakeNowInMilliseconds.get() + (3 * TimeUtils.MS_IN_SECOND));
         assertFalse(game.isOutOfTime(Common.COLOR_WHITE));
         assertTrue(game.isOutOfTime(Common.COLOR_BLACK));
     }
@@ -388,7 +395,7 @@ public class GeneralTestLib {
         assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), 3 * TimeUtils.MS_IN_MINUTE + 6 * TimeUtils.MS_IN_SECOND);
         assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), 3 * TimeUtils.MS_IN_MINUTE + 6 * TimeUtils.MS_IN_SECOND);
 
-        fakeNowInMilliseconds += (1 * TimeUtils.MS_IN_MINUTE);
+        fakeNowInMilliseconds.set(fakeNowInMilliseconds.get() + (TimeUtils.MS_IN_MINUTE));
         assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), 2 * TimeUtils.MS_IN_MINUTE + 6 * TimeUtils.MS_IN_SECOND);
         assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), 3 * TimeUtils.MS_IN_MINUTE + 6 * TimeUtils.MS_IN_SECOND);
 
@@ -400,11 +407,11 @@ public class GeneralTestLib {
         assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), 3 * TimeUtils.MS_IN_MINUTE + 6 * TimeUtils.MS_IN_SECOND);
         assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), 3 * TimeUtils.MS_IN_MINUTE + 6 * TimeUtils.MS_IN_SECOND);
 
-        fakeNowInMilliseconds += (1 * TimeUtils.MS_IN_MINUTE);
+        fakeNowInMilliseconds.set(fakeNowInMilliseconds.get() + (TimeUtils.MS_IN_MINUTE));
         assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), 2 * TimeUtils.MS_IN_MINUTE + 6 * TimeUtils.MS_IN_SECOND);
         assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), 3 * TimeUtils.MS_IN_MINUTE + 6 * TimeUtils.MS_IN_SECOND);
 
-        fakeNowInMilliseconds += (2 * TimeUtils.MS_IN_MINUTE) +  7 * TimeUtils.MS_IN_SECOND;
+        fakeNowInMilliseconds.set(fakeNowInMilliseconds.get() + (2 * TimeUtils.MS_IN_MINUTE) +  7 * TimeUtils.MS_IN_SECOND);
         assertTrue(game.isOutOfTime(Common.COLOR_WHITE));
         assertFalse(game.isOutOfTime(Common.COLOR_BLACK));
     }
@@ -432,20 +439,20 @@ public class GeneralTestLib {
         assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), 2 * TimeUtils.MS_IN_MINUTE);
         assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), 4 * TimeUtils.MS_IN_MINUTE);
 
-        fakeNowInMilliseconds += (1 * TimeUtils.MS_IN_MINUTE);
+        fakeNowInMilliseconds.set(fakeNowInMilliseconds.get() + (TimeUtils.MS_IN_MINUTE));
         assertFalse(game.isOutOfTime(Common.COLOR_WHITE));
         assertFalse(game.isOutOfTime(Common.COLOR_BLACK));
-        assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), 1 * TimeUtils.MS_IN_MINUTE);
+        assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), TimeUtils.MS_IN_MINUTE);
         assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), 4 * TimeUtils.MS_IN_MINUTE);
 
         assertTrue(game.playMoveList("f4 f5"));
-        fakeNowInMilliseconds += (1 * TimeUtils.MS_IN_MINUTE);
+        fakeNowInMilliseconds.set(fakeNowInMilliseconds.get() + (TimeUtils.MS_IN_MINUTE));
         assertFalse(game.isOutOfTime(Common.COLOR_WHITE));
         assertFalse(game.isOutOfTime(Common.COLOR_BLACK));
         assertEquals(game.getTimeLeftMs(Common.COLOR_WHITE), 6 * TimeUtils.MS_IN_SECOND);
         assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), 4 * TimeUtils.MS_IN_MINUTE + 6 * TimeUtils.MS_IN_SECOND);
 
-        fakeNowInMilliseconds += (7 * TimeUtils.MS_IN_SECOND);
+        fakeNowInMilliseconds.set(fakeNowInMilliseconds.get() + (7 * TimeUtils.MS_IN_SECOND));
         assertTrue(game.isOutOfTime(Common.COLOR_WHITE));
         assertFalse(game.isOutOfTime(Common.COLOR_BLACK));
         assertEquals(game.getTimeLeftMs(Common.COLOR_BLACK), 4 * TimeUtils.MS_IN_MINUTE + 6 * TimeUtils.MS_IN_SECOND);
@@ -545,57 +552,6 @@ public class GeneralTestLib {
         game.takeback();
     }
 
-    private void _testPGN(String pgn, String variant)
-    {
-        if (!Utils.isEmptyString(variant))
-        {
-            pgn = "[Variant \"" + variant + "\"]\n" + pgn;
-        }
-        LOGGER.fine("final PGN string '" + pgn + "'");
-        Game game = PGN.loadGame(pgn);
-        assertNotNull("failed to parse PGN '" + pgn + "'", game);
-
-        LOGGER.fine("game is loaded from PGN");
-
-        String gamePGN = PGN.getPGNString(game);
-        LOGGER.fine("Got PGN  : '" + gamePGN + "'");
-        // test PGNs are the same.
-        // remove [] tags
-        pgn = pgn.replaceAll("\\[.*\\]\n", "");
-        gamePGN = gamePGN.replaceAll("\\[.*\\]\n", "");
-        // remove comments
-        pgn = pgn.replaceAll("\\{.*\\}", "");
-        gamePGN = gamePGN.replaceAll("\\{.*\\}", "");
-        // unify spaces
-        pgn = pgn.replaceAll("\\s+", " ");
-        gamePGN = gamePGN.replaceAll("\\s+", " ");
-        // remove non ascii (UTF8 controls) control characters
-        pgn = pgn.replaceAll("\\P{Cc}", "");
-        gamePGN = gamePGN.replaceAll("\\P{Cc}", "");
-
-        assertEquals(pgn, gamePGN);
-
-        String fen = FEN.getFENString(game);
-        LOGGER.fine("FEN String '" + fen + "'");
-        Game fromFEN = FEN.loadGame(fen, true, game.getGameKind());
-        assertNotNull("failed to parse FEN '" + fen + "'", fromFEN);
-        if (game.isCrazyHouseOrBugHouse())
-        {
-            assertEquals(fromFEN.getCapturedPieces(Common.COLOR_WHITE), game.getCapturedPieces(Common.COLOR_WHITE));
-            assertEquals(fromFEN.getCapturedPieces(Common.COLOR_BLACK), game.getCapturedPieces(Common.COLOR_BLACK));
-        }
-        else
-        {
-            assertTrue( fromFEN.getCapturedPieces(Common.COLOR_WHITE).isEmpty());
-            assertTrue( fromFEN.getCapturedPieces(Common.COLOR_BLACK).isEmpty());
-        }
-        assertEquals(FEN.getFENString(fromFEN), fen);
-
-        game.takebackAllMoves();
-        assertTrue(game.getCapturedPiecesWhite().isEmpty());
-        assertTrue(game.getCapturedPiecesBlack().isEmpty());
-    }
-
     private void assertEqualGames(Game game1, Game game2)
     {
         assertEquals(game1.getGameKind(), game2.getGameKind());
@@ -674,6 +630,7 @@ public class GeneralTestLib {
         String fen = FEN.getFENString(game);
         LOGGER.fine("FEN String '" + fen + "'");
         Game fromFEN = FEN.loadGame(fen, true, game.getGameKind());
+        assertNotNull(fromFEN);
         assertEqualGames(fromFEN, game);
         if (game.isCrazyHouse())
         {
@@ -697,8 +654,8 @@ public class GeneralTestLib {
                 assertEquals(game.getActualDroppablePieceTypes(Common.COLOR_WHITE), fromFEN.getActualDroppablePieceTypes(Common.COLOR_WHITE));
                 assertEquals(game.getActualDroppablePieceTypes(Common.COLOR_BLACK), fromFEN.getActualDroppablePieceTypes(Common.COLOR_BLACK));
 
-                List<Integer> droppableTypes1 = new ArrayList<Integer>();
-                List<Integer> droppableTypes2 = new ArrayList<Integer>();
+                List<Integer> droppableTypes1 = new ArrayList<>();
+                List<Integer> droppableTypes2 = new ArrayList<>();
                 for (Piece piece : fromFEN.getDroppablePieces(Common.COLOR_WHITE))
                 {
                     droppableTypes1.add(piece.getTypeWhenDropping());
@@ -795,9 +752,6 @@ public class GeneralTestLib {
         }
         String line;
         String pgn = "";
-        Game game;
-
-        int index = 0;
 
         while (scanner.hasNextLine()) {
             line = scanner.nextLine();
@@ -808,7 +762,6 @@ public class GeneralTestLib {
                 pgn = pgn.trim();
                 if (! Utils.isEmptyString(pgn))
                 {
-                    index ++ ;
 
                     if (! Utils.isEmptyString(variant))
                     {
@@ -1056,7 +1009,7 @@ public class GeneralTestLib {
     @Test
     public void testFENGameKindGuessing()
     {
-        final Map<String, Integer> fens = new HashMap<String, Integer>();
+        final Map<String, Integer> fens = new HashMap<>();
         fens.put(FEN.FEN_INITIAL_POS, Common.GAME_KIND_REGULAR);
         fens.put(FEN.FEN_GRASSHOPER_POS, Common.GAME_KIND_GRASSHOPER);
         fens.put(FEN.FEN_MINICAPA_POS, Common.GAME_KIND_MINICAPA);
