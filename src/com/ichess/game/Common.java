@@ -59,10 +59,7 @@ public class Common {
      */
     public static final String[] GAME_KIND_TEXT = new String[]{"Any", "Regular", "Fishcer 960", "Losing", "Grasshoppers", "Mini Capablance", "Free", "CrazyHouse", "Bug House"};
     public static final String STD_INIT_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-    public static final String DEFAULT_BOARD = "gray";
-    public static final String[] BOARDS = new String[] { "Gray", "Earth", "Marble", "Stone" };
-    public static final String DEFAULT_PIECES = "merida";
-    public static final String[] PIECES = new String[] { "Merida", "Alpha", "Uscf" };
+
     // max move number value
     public static final int MAX_MOVENUM = 10000;
 

@@ -55,11 +55,11 @@
     <target name="jar" depends="compile">
         <delete file="bin/${lib.name}-${version}.jar"></delete>
         <jar destfile="bin/${lib.name}-${version}.jar" update="true">
-            <fileset dir="${build.dir}" includes="com/ichess/fastswisspairing/**" />
+            <fileset dir="${build.dir}" includes="com/ichess/game/**" />
         </jar>
         <jar destfile="bin/${lib.name}-${version}-sources.jar" update="true">
-            <fileset dir="${build.dir}" includes="com/ichess/fastswisspairing/**" />
-            <fileset dir="${src.dir}" includes="com/ichess/fastswisspairing/**/*.java" />
+            <fileset dir="${build.dir}" includes="com/ichess/game/**" />
+            <fileset dir="${src.dir}" includes="com/ichess/game/**/*.java" />
         </jar>
     </target>
 
